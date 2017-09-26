@@ -1,0 +1,15 @@
+Metadata-Version: 1.0
+Name: cli-pipeline
+Version: 1.2.0
+Summary: PipelineAI CLI
+Home-page: https://github.com/PipelineAI/pip/cli_pipeline
+Author: Chris Fregly
+Author-email: chris@pipeline.io
+License: UNKNOWN
+Description-Content-Type: UNKNOWN
+Description: PipelineAI API:  http://pipeline.ai/api/
+        
+        
+        Requirements:
+        ['kubernetes==3.0.0', 'fire==0.1.1', 'requests==2.18.1', 'pyyaml==3.12', 'tabulate==0.7.7', 'futures==3.1.1', 'jinja2==2.9.6']
+Platform: UNKNOWN

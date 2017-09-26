@@ -1,0 +1,10 @@
+README.rst
+setup.cfg
+setup.py
+cli_pipeline/__init__.py
+cli_pipeline.egg-info/PKG-INFO
+cli_pipeline.egg-info/SOURCES.txt
+cli_pipeline.egg-info/dependency_links.txt
+cli_pipeline.egg-info/entry_points.txt
+cli_pipeline.egg-info/requires.txt
+cli_pipeline.egg-info/top_level.txt

@@ -29,6 +29,7 @@ with open('requirements.txt') as f:
     requirements = [line.rstrip() for line in f.readlines()]
 
 setup(
+    include_package_data=True,
     name = "cli-pipeline",
     packages = ["cli_pipeline"],
     entry_points = {

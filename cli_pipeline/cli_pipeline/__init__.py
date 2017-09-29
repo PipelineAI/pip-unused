@@ -1,6 +1,6 @@
 #-*- coding: utf-8 -*-
 
-__version__ = "1.2.10"
+__version__ = "1.2.14"
 
 # References:
 #   https://github.com/kubernetes-incubator/client-python/blob/master/kubernetes/README.md
@@ -82,10 +82,13 @@ class PipelineCli(object):
 
     _pipeline_api_version = 'v1' 
 
+    _default_templates_path = os.path.join(os.path.dirname(__file__), 'templates/')
+
 
     def version(self):
         print('cli_version: %s' % __version__)
         print('api_version: %s' % PipelineCli._pipeline_api_version)
+        print('templates_path: %s' % PipelineCli._default_templates_path)
 
 
     # TODO: Pull ./templates/ into this cli project
@@ -94,7 +97,7 @@ class PipelineCli(object):
                        model_type,
                        model_name,
                        model_tag,
-                       templates_path='./templates/',
+                       templates_path=_default_templates_path,
                        worker_memory_limit='2G',
                        worker_cpu_limit='2000m',
                        ps_replicas='2',
@@ -265,7 +268,7 @@ class PipelineCli(object):
                     build_path='.',
                     build_registry_repo='fluxcapacitor',
                     build_prefix='predict',
-                    templates_path='./templates/'):
+                    templates_path=_default_templates_path):
 
         if build_type == 'docker':
             generated_Dockerfile = self._model_build_init(model_type=model_type, 
@@ -293,7 +296,7 @@ class PipelineCli(object):
                     model_type,
                     model_name,
                     model_tag,
-                    templates_path='./templates/',
+                    templates_path=_default_templates_path,
                     memory_limit='2G',
                     cpu_limit='2000m',
                     target_cpu_util_percentage='75',
@@ -574,7 +577,7 @@ class PipelineCli(object):
                      model_type,
                      model_name,
                      model_tag,
-                     templates_path='./templates/',
+                     templates_path=_default_templates_path,
                      memory_limit='2G',
                      cpu_limit='2000m',
                      target_cpu_util_percentage='75',

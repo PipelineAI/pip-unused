@@ -38,6 +38,10 @@ class KafkaHandler(logging.Handler):
             self.handleError(record)
 
     def close(self):
-        if self.producer is not None:
-            self.producer.stop()
+        try:
+            if self.producer:
+                self.producer.stop()
+        except:
+            pass
+
         logging.Handler.close(self)

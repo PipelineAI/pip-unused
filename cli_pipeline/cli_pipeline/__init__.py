@@ -1,6 +1,6 @@
 #-*- coding: utf-8 -*-
 
-__version__ = "1.2.0"
+__version__ = "1.2.10"
 
 # References:
 #   https://github.com/kubernetes-incubator/client-python/blob/master/kubernetes/README.md
@@ -74,6 +74,7 @@ class PipelineCli(object):
                          'hystrix': (['dashboard/hystrix-svc.yaml'], []),
                         }
 
+    _Dockerfile_template_registry = {'predict': (['predict-Dockerfile.template'], [])}
     _kube_deploy_template_registry = {'predict': (['predict-deploy.yaml.template'], [])}
     _kube_svc_template_registry = {'predict': (['predict-svc.yaml.template'], [])}
     _kube_autoscale_template_registry = {'predict': (['predict-autoscale.yaml.template'], [])}
@@ -93,19 +94,19 @@ class PipelineCli(object):
                        model_type,
                        model_name,
                        model_tag,
-                       template_path='./templates/',
+                       templates_path='./templates/',
                        worker_memory_limit='2G',
                        worker_cpu_limit='2000m',
                        ps_replicas='2',
                        worker_replicas='3'):
 
-        template_path = os.path.expandvars(template_path)
-        template_path = os.path.expanduser(template_path)
-        template_path = os.path.abspath(template_path)
+        templates_path = os.path.expandvars(templates_path)
+        templates_path = os.path.expanduser(templates_path)
+        templates_path = os.path.abspath(templates_path)
 
         print("")
-        print("Using templates in '%s'." % template_path)
-        print("(Specify --template-path if the templates live elsewhere.)")
+        print("Using templates in '%s'." % templates_path)
+        print("(Specify --templates-path if the templates live elsewhere.)")
         print("")
 
         context = {'PIPELINE_MODEL_TYPE': model_type,
@@ -116,11 +117,10 @@ class PipelineCli(object):
                    'PIPELINE_PS_REPLICAS': int(ps_replicas),
                    'PIPELINE_WORKER_REPLICAS': int(worker_replicas)}
 
-        model_clustered_template = os.path.join(template_path, PipelineCli._kube_clustered_template_registry['train'][0][0])
-
+        model_clustered_template = os.path.join(templates_path, PipelineCli._kube_clustered_template_registry['train'][0][0])
         path, filename = os.path.split(model_clustered_template)
         rendered = jinja2.Environment(loader=jinja2.FileSystemLoader(path or './')).get_template(filename).render(context)
-        rendered_filename = './clustered-%s-%s-%s.yaml' % (model_type, model_name, model_tag)
+        rendered_filename = './generated-clustered-%s-%s-%s.yaml' % (model_type, model_name, model_tag)
         with open(rendered_filename, 'wt') as fh:
             fh.write(rendered)
         print("'%s' -> '%s'." % (filename, rendered_filename))
@@ -221,57 +221,40 @@ class PipelineCli(object):
         print("")
 
 
-    def model_build_push_deploy(self,
-                                model_type,
-                                model_name,
-                                model_tag,
-                                model_path,
-                                template_path='./templates/',
-                                memory_limit='2G',
-                                cpu_limit='2000m',
-                                target_cpu_util_percentage='75',
-                                min_replicas='1',
-                                max_replicas='2',
-                                build_type='docker',
-                                build_path='.',
-                                build_registry_url='docker.io',
-                                build_registry_repo='fluxcapacitor',
-                                build_prefix='predict',
-                                kube_namespace='default',
-                                timeout=1200,
-                                force_deploy=False):
+    def _model_build_init(self,
+                          model_type,
+                          model_name,
+                          model_tag,
+                          templates_path,
+                          build_path):
 
-        self.model_build(model_type=model_type,
-                         model_name=model_name,
-                         model_tag=model_tag,
-                         model_path=model_path,
-                         build_type=build_type,
-                         build_path=build_path,
-                         build_registry_repo=build_registry_repo,
-                         build_prefix=build_prefix)
+        templates_path = os.path.expandvars(templates_path)
+        templates_path = os.path.expanduser(templates_path)
+        templates_path = os.path.abspath(templates_path)
 
-        self.model_push(model_type=model_type,
-                        model_name=model_name,
-                        model_tag=model_tag,
-                        build_registry_url=build_registry_url,
-                        build_registry_repo=build_registry_repo,
-                        build_prefix=build_prefix)
+        build_path = os.path.expandvars(build_path)
+        build_path = os.path.expanduser(build_path)
+        build_path = os.path.abspath(build_path)
 
-        self.model_deploy(model_type=model_type,
-                          model_name=model_name,
-                          model_tag=model_tag,
-                          template_path=template_path,
-                          memory_limit=memory_limit,
-                          cpu_limit=cpu_limit,
-                          target_cpu_util_percentage=target_cpu_util_percentage,
-                          min_replicas=min_replicas,
-                          max_replicas=max_replicas,
-                          build_registry_url=build_registry_url,
-                          build_registry_repo=build_registry_repo,
-                          build_prefix=build_prefix,
-                          kube_namespace=kube_namespace,
-                          timeout=timeout,
-                          force_deploy=force_deploy)
+        print("")
+        print("Using templates in '%s'." % templates_path)
+        print("(Specify --templates-path if the templates live elsewhere.)")
+        print("")
+
+        context = {'PIPELINE_MODEL_TYPE': model_type,
+                   'PIPELINE_MODEL_NAME': model_name,
+                   'PIPELINE_MODEL_TAG': model_tag}
+
+        model_predict_Dockerfile_templates_path = os.path.join(templates_path, PipelineCli._Dockerfile_template_registry['predict'][0][0])
+        path, filename = os.path.split(model_predict_Dockerfile_templates_path)
+        rendered = jinja2.Environment(loader=jinja2.FileSystemLoader(path or './')).get_template(filename).render(context)
+        rendered_filename = '%s/generated-%s-%s-%s-Dockerfile' % (build_path, model_type, model_name, model_tag)
+        with open(rendered_filename, 'wt') as fh:
+            fh.write(rendered)
+            print("'%s' -> '%s'." % (filename, rendered_filename))
+
+        return rendered_filename
+
 
     def model_build(self,
                     model_type,
@@ -281,10 +264,17 @@ class PipelineCli(object):
                     build_type='docker',
                     build_path='.',
                     build_registry_repo='fluxcapacitor',
-                    build_prefix='predict'):
+                    build_prefix='predict',
+                    templates_path='./templates/'):
 
         if build_type == 'docker':
-            cmd = 'docker build -t %s/%s-%s-%s:%s --build-arg model_type=%s --build-arg model_name=%s --build-arg model_tag=%s --build-arg model_path=%s -f %s/Dockerfile %s' % (build_registry_repo, build_prefix, model_type, model_name, model_tag, model_type, model_name, model_tag, model_path, build_path, build_path)
+            generated_Dockerfile = self._model_build_init(model_type=model_type, 
+                                                          model_name=model_name,
+                                                          model_tag=model_tag,
+                                                          templates_path=templates_path,
+                                                          build_path=build_path)
+
+            cmd = 'docker build -t %s/%s-%s-%s:%s --build-arg model_type=%s --build-arg model_name=%s --build-arg model_tag=%s --build-arg model_path=%s -f %s %s' % (build_registry_repo, build_prefix, model_type, model_name, model_tag, model_type, model_name, model_tag, model_path, generated_Dockerfile, build_path)
 
             print(cmd)
             print("")
@@ -303,7 +293,7 @@ class PipelineCli(object):
                     model_type,
                     model_name,
                     model_tag,
-                    template_path='./templates/',
+                    templates_path='./templates/',
                     memory_limit='2G',
                     cpu_limit='2000m',
                     target_cpu_util_percentage='75',
@@ -313,13 +303,13 @@ class PipelineCli(object):
                     build_registry_repo='fluxcapacitor',
                     build_prefix='predict'):
 
-        template_path = os.path.expandvars(template_path)
-        template_path = os.path.expanduser(template_path)
-        template_path = os.path.abspath(template_path)
+        templates_path = os.path.expandvars(templates_path)
+        templates_path = os.path.expanduser(templates_path)
+        templates_path = os.path.abspath(templates_path)
 
         print("")
-        print("Using templates in '%s'." % template_path)
-        print("(Specify --template-path if the templates live elsewhere.)") 
+        print("Using templates in '%s'." % templates_path)
+        print("(Specify --templates-path if the templates live elsewhere.)") 
         print("")
  
         context = {'PIPELINE_MODEL_TYPE': model_type,
@@ -336,33 +326,22 @@ class PipelineCli(object):
 
         rendered_filenames = []
 
-        model_predict_deploy_yaml_template_path = os.path.join(template_path, PipelineCli._kube_deploy_template_registry['predict'][0][0])
-
-        path, filename = os.path.split(model_predict_deploy_yaml_template_path)
+        model_predict_deploy_yaml_templates_path = os.path.join(templates_path, PipelineCli._kube_deploy_template_registry['predict'][0][0])
+        path, filename = os.path.split(model_predict_deploy_yaml_templates_path)
         rendered = jinja2.Environment(loader=jinja2.FileSystemLoader(path or './')).get_template(filename).render(context)
-        rendered_filename = './%s-%s-%s-%s-deploy.yaml' % (build_prefix, model_type, model_name, model_tag)
+        rendered_filename = './generated-%s-%s-%s-%s-deploy.yaml' % (build_prefix, model_type, model_name, model_tag)
         with open(rendered_filename, 'wt') as fh:
             fh.write(rendered)
-            model_predict_svc_yaml_template_path = os.path.join(template_path, PipelineCli._kube_svc_template_registry['predict'][0][0])
             print("'%s' -> '%s'." % (filename, rendered_filename))
             rendered_filenames += [rendered_filename]
 
-        path, filename = os.path.split(model_predict_svc_yaml_template_path)
+        model_predict_svc_yaml_templates_path = os.path.join(templates_path, PipelineCli._kube_svc_template_registry['predict'][0][0])
+        path, filename = os.path.split(model_predict_svc_yaml_templates_path)
         rendered = jinja2.Environment(loader=jinja2.FileSystemLoader(path or './')).get_template(filename).render(context)    
-        rendered_filename = './%s-%s-%s-%s-svc.yaml' % (build_prefix, model_type, model_name, model_tag)
+        rendered_filename = './generated-%s-%s-%s-%s-svc.yaml' % (build_prefix, model_type, model_name, model_tag)
         with open(rendered_filename, 'wt') as fh:
             fh.write(rendered)
             print("'%s' -> '%s'." % (filename, rendered_filename)) 
-            rendered_filenames += [rendered_filename]
-
-        model_predict_autoscale_yaml_template_path = os.path.join(template_path, PipelineCli._kube_autoscale_template_registry['predict'][0][0])
-
-        path, filename = os.path.split(model_predict_autoscale_yaml_template_path)
-        rendered = jinja2.Environment(loader=jinja2.FileSystemLoader(path or './')).get_template(filename).render(context)                     
-        rendered_filename = './%s-%s-%s-%s-autoscale.yaml' % (build_prefix, model_type, model_name, model_tag)
-        with open(rendered_filename, 'wt') as fh:
-            fh.write(rendered) 
-            print("'%s' -> '%s'." % (filename, rendered_filename))
             rendered_filenames += [rendered_filename]
 
         return rendered_filenames
@@ -595,7 +574,7 @@ class PipelineCli(object):
                      model_type,
                      model_name,
                      model_tag,
-                     template_path='./templates/',
+                     templates_path='./templates/',
                      memory_limit='2G',
                      cpu_limit='2000m',
                      target_cpu_util_percentage='75',
@@ -605,12 +584,12 @@ class PipelineCli(object):
                      build_registry_url='docker.io',
                      build_registry_repo='fluxcapacitor',
                      build_prefix='predict',
-                     timeout=1200,
-                     force_deploy=False):
+                     timeout=1200):
 
         print('model_type: %s' % model_type)
         print('model_name: %s' % model_name)
         print('model_tag: %s' % model_tag)
+        print('templates_path: %s' % templates_path)
         print('memory_limit: %s' % memory_limit)
         print('cpu_limit: %s' % cpu_limit)
         print('target_cpu_util_percentage: %s' % target_cpu_util_percentage)
@@ -621,11 +600,11 @@ class PipelineCli(object):
         print('build_registry_repo: %s' % build_registry_repo)
         print('build_prefix: %s' % build_prefix)
         print('timeout: %s' % timeout)
-        print('force_deploy: %s' % force_deploy)
 
         rendered_yamls = self._model_yaml(model_type=model_type,
                                           model_name=model_name,
                                           model_tag=model_tag,
+                                          templates_path=templates_path,
                                           memory_limit=memory_limit,
                                           cpu_limit=cpu_limit,
                                           target_cpu_util_percentage=target_cpu_util_percentage,
@@ -638,11 +617,6 @@ class PipelineCli(object):
         for rendered_yaml in rendered_yamls:
             # For now, only handle '-deploy' and '-svc' yaml's
             if '-deploy' in rendered_yaml or '-svc' in rendered_yaml:
-                # For now, only force '-deploy' yaml's
-                if force_deploy and '-deploy' in rendered_yaml:
-                    self.kube_delete(yaml_path=rendered_yaml,
-                                     kube_namespace=kube_namespace)
-
                 self.kube_create(yaml_path=rendered_yaml,
                                  kube_namespace=kube_namespace)
 

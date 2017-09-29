@@ -1,4 +1,4 @@
-pipeline_ai_cli.egg-info/
+*.egg-info/PKG-INFO
 dist/
 build/
 *.pyc

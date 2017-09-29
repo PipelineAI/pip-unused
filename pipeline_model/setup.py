@@ -16,7 +16,7 @@ from setuptools import setup
 
 version = re.search(
     '^__version__\s*=\s*"(.*)"',
-    open('pipeline_models/__init__.py').read(),
+    open('pipeline_model/__init__.py').read(),
     re.M
     ).group(1)
 
@@ -28,14 +28,14 @@ with open('requirements.txt', encoding='utf-8') as f:
     requirements = [line.rstrip() for line in f.readlines()]
 
 setup(
-    name = "pipeline-models",
-    packages = ["pipeline_models"],
+    name = "pipeline-model",
+    packages = ["pipeline_model"],
     version = version,
-    description = "PipelineAI Models",
+    description = "PipelineAI Model",
     long_description = "%s\n\nRequirements:\n%s" % (long_description, requirements),
     author = "Chris Fregly",
-    author_email = "chris@pipeline.ai",
-    url = "https://github.com/fluxcapacitor/pipeline/tree/master/lib/models",
+    author_email = "github@pipeline.ai",
+    url = "https://github.com/pipelineai/pip/",
     install_requires=requirements,
     dependency_links=[
     ]

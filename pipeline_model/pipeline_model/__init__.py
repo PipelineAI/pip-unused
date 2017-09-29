@@ -4,7 +4,7 @@ import asyncio
 import tensorflow as tf
 from . import model_pb2, predict_pb2, prediction_service_pb2
 
-__version__ = "0.3"
+__version__ = "1.0.1"
 
 class TensorFlowServingModel():
 

@@ -1,1 +1,1 @@
-from pipeline_models import TensorFlowServingModel 
+from pipeline_model import TensorFlowServingModel 

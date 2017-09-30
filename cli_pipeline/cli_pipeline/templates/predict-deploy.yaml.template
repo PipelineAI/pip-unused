@@ -37,7 +37,7 @@ spec:
 #        timeoutSeconds: 5
         resources:
           limits:
-            cpu: {{PIPELINE_CPU_LIMIT}}
+            cpu: {{PIPELINE_CORE_LIMIT}}
             memory: {{PIPELINE_MEMORY_LIMIT}}
         imagePullPolicy: "Always"
         env:

@@ -27,7 +27,7 @@ ENV \
 COPY $model_path $PIPELINE_MODEL_PATH
 
 ENV \
-  PIPELINE_MODEL_CONDA_ENV_NAME=pipeline-$model_type-$model_name-$model_tag
+  PIPELINE_MODEL_PREDICT_CONDA_ENV_NAME=pipeline-predict_$model_type-$model_name-$model_tag
 
 RUN \
   /root/scripts/setup-model-environment.sh

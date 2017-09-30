@@ -1,0 +1,68 @@
+FROM pipelineai/train:cpu-master
+
+ARG model_type
+RUN \
+  echo $model_type
+ENV \
+  PIPELINE_MODEL_TYPE=$model_type
+
+ARG model_name
+RUN \
+  echo $model_name
+ENV \
+  PIPELINE_MODEL_NAME=$model_name
+
+ARG model_tag
+RUN \
+  echo $model_tag
+ENV \
+  PIPELINE_MODEL_TAG=$model_tag
+
+ARG model_path
+RUN \
+  echo $model_path
+ENV \
+  PIPELINE_MODEL_PATH=/root/model/$model_type/$model_name/$model_tag
+
+COPY $model_path $PIPELINE_MODEL_PATH
+RUN \
+   sudo chmod a+rwx -R $PIPELINE_MODEL_PATH
+RUN \
+   echo "PIPELINE_MODEL_PATH=$PIPELINE_MODEL_PATH"
+
+ENV \
+  PIPELINE_MODEL_TRAIN_CONDA_ENV_NAME=pipeline-train-$model_type-$model_name-$model_tag
+
+# TODO:  Sub-Dockerfile There...
+#RUN \
+#  /root/scripts/setup-model-environment.sh
+#RUN \
+#  /root/scripts/train-model-if-requested.sh
+
+RUN \
+    if [ -f "$PIPELINE_MODEL_PATH/Guild" ]; then \
+         echo "" \
+         && echo "Starting Guild-based TensorFlow Training with learning_rate=[0.05, 0.025]..." \
+         && echo "" \
+         && cd $PIPELINE_ADMIN_MODEL_TRAIN_PATH \
+         && guild prepare \
+         && guild train --flag=learning_rate=0.05 \
+         && guild evaluate --latest-run \
+         && guild train --flag=learning_rate=0.025 \
+         && guild evaluate --latest-run \
+         && echo "" \
+         && echo "...Training Complete!" \
+         && echo ""; \
+   fi
+
+RUN \
+   if [ -f "$PIPELINE_MODEL_PATH/pipeline_train.py" ]; then \
+         echo "" \
+         && echo "Starting pipeline_train.py..." \
+         && echo "" \
+         && cd $PIPELINE_ADMIN_MODEL_TRAIN_PATH \
+         && python pipeline_train.py \
+         && echo "" \
+         && echo "...Training Complete!" \
+         && echo ""; \
+   fi

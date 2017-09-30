@@ -1,6 +1,6 @@
 #-*- coding: utf-8 -*-
 
-__version__ = "1.2.23"
+__version__ = "1.2.25"
 
 # References:
 #   https://github.com/kubernetes-incubator/client-python/blob/master/kubernetes/README.md
@@ -75,14 +75,15 @@ class PipelineCli(object):
                         }
 
     _Dockerfile_template_registry = {'predict-cpu': (['predict-Dockerfile-cpu.template'], []),
-                                     'predict-gpu': (['predict-Dockerfile-gpu.template'], [])}
+                                     'predict-gpu': (['predict-Dockerfile-gpu.template'], []),
+                                     'train-cpu': (['train-Dockerfile-cpu.template'], []),
+                                     'train-gpu': (['train-Dockerfile-gpu.template'], [])}
     _kube_deploy_template_registry = {'predict': (['predict-deploy.yaml.template'], [])}
     _kube_svc_template_registry = {'predict': (['predict-svc.yaml.template'], [])}
     _kube_autoscale_template_registry = {'predict': (['predict-autoscale.yaml.template'], [])}
-    _kube_clustered_template_registry = {'train': (['clustered.yaml.template'], [])}
-
+    _kube_train_cluster_template_registry = {'train-cluster-cpu': (['train-cluster-cpu.yaml.template'], [])}
+    
     _pipeline_api_version = 'v1' 
-
     _default_templates_path = os.path.join(os.path.dirname(__file__), 'templates/')
 
 
@@ -92,17 +93,18 @@ class PipelineCli(object):
         print('templates_path: %s' % PipelineCli._default_templates_path)
 
 
-    # TODO: Pull ./templates/ into this cli project
-    #       (or otherwise handle the location of templates outside of the cli)
-    def clustered_yaml(self,
-                       model_type,
-                       model_name,
-                       model_tag,
-                       templates_path=_default_templates_path,
-                       worker_memory_limit='2G',
-                       worker_cpu_limit='2000m',
-                       ps_replicas='2',
-                       worker_replicas='3'):
+    def _train_cluster_yaml(self,
+                        model_type,
+                        model_name,
+                        model_tag,
+                        templates_path=_default_templates_path,
+                        build_registry_url='docker.io',
+                        build_registry_repo='pipelineai',
+                        build_prefix='cluster',
+                        worker_memory_limit='2G',
+                        worker_core_limit='2000m',
+                        ps_replicas='2',
+                        worker_replicas='3'):
 
         templates_path = os.path.expandvars(templates_path)
         templates_path = os.path.expanduser(templates_path)
@@ -116,15 +118,18 @@ class PipelineCli(object):
         context = {'PIPELINE_MODEL_TYPE': model_type,
                    'PIPELINE_MODEL_NAME': model_name,
                    'PIPELINE_MODEL_TAG': model_tag,
-                   'PIPELINE_WORKER_CPU_LIMIT': worker_cpu_limit,
+                   'PIPELINE_WORKER_CORE_LIMIT': worker_core_limit,
                    'PIPELINE_WORKER_MEMORY_LIMIT': worker_memory_limit,
                    'PIPELINE_PS_REPLICAS': int(ps_replicas),
-                   'PIPELINE_WORKER_REPLICAS': int(worker_replicas)}
+                   'PIPELINE_WORKER_REPLICAS': int(worker_replicas),
+                   'PIPELINE_BUILD_REGISTRY_URL': build_registry_url,
+                   'PIPELINE_BUILD_REGISTRY_REPO': build_registry_repo,
+                   'PIPELINE_BUILD_PREFIX': build_prefix}
 
-        model_clustered_template = os.path.join(templates_path, PipelineCli._kube_clustered_template_registry['train'][0][0])
+        model_clustered_template = os.path.join(templates_path, PipelineCli._kube_train_cluster_template_registry['train-cluster-cpu'][0][0])
         path, filename = os.path.split(model_clustered_template)
         rendered = jinja2.Environment(loader=jinja2.FileSystemLoader(path or './')).get_template(filename).render(context)
-        rendered_filename = './generated-clustered-%s-%s-%s.yaml' % (model_type, model_name, model_tag)
+        rendered_filename = './generated-train-cluster-%s-%s-%s-cpu.yaml' % (model_type, model_name, model_tag)
         with open(rendered_filename, 'wt') as fh:
             fh.write(rendered)
         print("'%s' -> '%s'." % (filename, rendered_filename))
@@ -147,10 +152,10 @@ class PipelineCli(object):
         return output.rstrip().decode('utf-8')
 
 
-    def service_connect(self,
-                        service_name,
-                        local_port=None,
-                        service_port=None):
+    def service_proxy(self,
+                      service_name,
+                      local_port=None,
+                      service_port=None):
 
         pod = self._get_pod_by_service_name(service_name=service_name)
         if not pod:
@@ -225,6 +230,85 @@ class PipelineCli(object):
         print("")
 
 
+    def _model_train_init(self,
+                          model_type,
+                          model_name,
+                          model_tag,
+                          templates_path,
+                          build_path):
+
+        print("")
+        print("Using templates in '%s'." % templates_path)
+        print("(Specify --templates-path if the templates live elsewhere.)")
+        print("")
+
+        context = {'PIPELINE_MODEL_TYPE': model_type,
+                   'PIPELINE_MODEL_NAME': model_name,
+                   'PIPELINE_MODEL_TAG': model_tag}
+
+        model_train_cpu_Dockerfile_templates_path = os.path.join(templates_path, PipelineCli._Dockerfile_template_registry['train-cpu'][0][0])
+        path, filename = os.path.split(model_train_cpu_Dockerfile_templates_path)
+        rendered = jinja2.Environment(loader=jinja2.FileSystemLoader(path or './')).get_template(filename).render(context)
+        # TODO:  Create -gpu version as well
+        rendered_filename = '%s/generated-%s-%s-%s-Dockerfile-cpu' % (build_path, model_type, model_name, model_tag)
+        with open(rendered_filename, 'wt') as fh:
+            fh.write(rendered)
+            print("'%s' -> '%s'." % (filename, rendered_filename))
+
+        return rendered_filename
+
+
+    def model_train(self,
+                    model_type,
+                    model_name,
+                    model_tag,
+                    model_path='.',
+                    build_type='docker',
+                    build_path='.',
+                    build_registry_url='docker.io',
+                    build_registry_repo='pipelineai',
+                    build_prefix='train',
+                    templates_path=_default_templates_path):
+
+
+        build_path = os.path.expandvars(build_path)
+        build_path = os.path.expanduser(build_path)
+        build_path = os.path.abspath(build_path)
+
+        templates_path = os.path.expandvars(templates_path)
+        templates_path = os.path.expanduser(templates_path)
+        templates_path = os.path.abspath(templates_path)
+        templates_path = os.path.relpath(templates_path, build_path)
+
+        model_path = os.path.expandvars(model_path)
+        model_path = os.path.expanduser(model_path)
+        model_path = os.path.abspath(model_path)
+        model_path = os.path.relpath(model_path, build_path)
+
+        if build_type == 'docker':
+            generated_Dockerfile = self._model_train_init(model_type=model_type,
+                                                          model_name=model_name,
+                                                          model_tag=model_tag,
+                                                          templates_path=templates_path,
+                                                          build_path=build_path)
+
+            cmd = 'docker build -t %s/%s/%s-%s-%s:%s --build-arg model_type=%s --build-arg model_name=%s --build-arg model_tag=%s --build-arg model_path=%s -f %s %s' % (build_registry_url, build_registry_repo, build_prefix, model_type, model_name, model_tag, model_type, model_name, model_tag, model_path, generated_Dockerfile, build_path)
+
+            print(cmd)
+            print("")
+            process = subprocess.call(cmd, shell=True)
+
+            self._train_cluster_yaml(model_type,
+                                     model_name,
+                                     model_tag,
+                                     templates_path=templates_path,
+                                     build_registry_url=build_registry_url,
+                                     build_registry_repo=build_registry_repo,
+                                     build_prefix=build_prefix)
+        else:
+            print("Build type '%s' not found." % build_type)
+
+
     def _model_build_init(self,
                           model_type,
                           model_name,
@@ -245,7 +329,7 @@ class PipelineCli(object):
         path, filename = os.path.split(model_predict_cpu_Dockerfile_templates_path)
         rendered = jinja2.Environment(loader=jinja2.FileSystemLoader(path or './')).get_template(filename).render(context)
         # TODO:  Create -gpu version as well
-        rendered_filename = '%s/generated-%s-%s-%s-cpu-Dockerfile' % (build_path, model_type, model_name, model_tag)
+        rendered_filename = '%s/generated-%s-%s-%s-Dockerfile-cpu' % (build_path, model_type, model_name, model_tag)
         with open(rendered_filename, 'wt') as fh:
             fh.write(rendered)
             print("'%s' -> '%s'." % (filename, rendered_filename))
@@ -263,7 +347,6 @@ class PipelineCli(object):
                     build_registry_repo='pipelineai',
                     build_prefix='predict',
                     templates_path=_default_templates_path):
-
 
         build_path = os.path.expandvars(build_path)
         build_path = os.path.expanduser(build_path)
@@ -292,23 +375,17 @@ class PipelineCli(object):
             print("")
             process = subprocess.call(cmd, shell=True)
         else:
-            self.model_bundle(model_type=model_type,
-                              model_name=model_name,
-                              model_path=model_path,
-                              model_tag=model_tag,
-                              build_path=build_path)  
+            print("Build type '%s' not found." % build_type)
 
 
-    # TODO: Pull ./templates/ into this cli project 
-    #       (or otherwise handle the location of templates outside of the cli)
-    def _model_yaml(self,
+    def _predict_yaml(self,
                     model_type,
                     model_name,
                     model_tag,
                     templates_path=_default_templates_path,
                     memory_limit='2G',
-                    cpu_limit='2000m',
-                    target_cpu_util_percentage='75',
+                    core_limit='2000m',
+                    target_core_util_percentage='75',
                     min_replicas='1',
                     max_replicas='2',
                     build_registry_url='docker.io',
@@ -327,9 +404,9 @@ class PipelineCli(object):
         context = {'PIPELINE_MODEL_TYPE': model_type,
                    'PIPELINE_MODEL_NAME': model_name,
                    'PIPELINE_MODEL_TAG': model_tag,
-                   'PIPELINE_CPU_LIMIT': cpu_limit,
+                   'PIPELINE_CORE_LIMIT': core_limit,
                    'PIPELINE_MEMORY_LIMIT': memory_limit,
-                   'PIPELINE_TARGET_CPU_UTIL_PERCENTAGE': target_cpu_util_percentage,
+                   'PIPELINE_TARGET_CORE_UTIL_PERCENTAGE': target_core_util_percentage,
                    'PIPELINE_MIN_REPLICAS': min_replicas,
                    'PIPELINE_MAX_REPLICAS': max_replicas,
                    'PIPELINE_BUILD_REGISTRY_URL': build_registry_url,
@@ -588,8 +665,8 @@ class PipelineCli(object):
                      model_tag,
                      templates_path=_default_templates_path,
                      memory_limit='2G',
-                     cpu_limit='2000m',
-                     target_cpu_util_percentage='75',
+                     core_limit='2000m',
+                     target_core_util_percentage='75',
                      min_replicas='1',
                      max_replicas='2',
                      kube_namespace='default',
@@ -603,8 +680,8 @@ class PipelineCli(object):
         print('model_tag: %s' % model_tag)
         print('templates_path: %s' % templates_path)
         print('memory_limit: %s' % memory_limit)
-        print('cpu_limit: %s' % cpu_limit)
-        print('target_cpu_util_percentage: %s' % target_cpu_util_percentage)
+        print('core_limit: %s' % core_limit)
+        print('target_core_util_percentage: %s' % target_core_util_percentage)
         print('min_replicas: %s' % min_replicas)
         print('max_replicas: %s' % max_replicas)
         print('kube_namespace: %s' % kube_namespace)
@@ -613,13 +690,13 @@ class PipelineCli(object):
         print('build_prefix: %s' % build_prefix)
         print('timeout: %s' % timeout)
 
-        rendered_yamls = self._model_yaml(model_type=model_type,
+        rendered_yamls = self._predict_yaml(model_type=model_type,
                                           model_name=model_name,
                                           model_tag=model_tag,
                                           templates_path=templates_path,
                                           memory_limit=memory_limit,
-                                          cpu_limit=cpu_limit,
-                                          target_cpu_util_percentage=target_cpu_util_percentage,
+                                          core_limit=core_limit,
+                                          target_core_util_percentage=target_core_util_percentage,
                                           min_replicas=min_replicas,
                                           max_replicas=max_replicas,
                                           build_registry_url=build_registry_url,

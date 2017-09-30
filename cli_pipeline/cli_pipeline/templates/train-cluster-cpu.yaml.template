@@ -1,0 +1,74 @@
+{%- set port = 2222 -%}
+
+{%- set replicas = {"worker": PIPELINE_WORKER_REPLICAS, "ps": PIPELINE_PS_REPLICAS} -%}
+
+{%- macro worker_hosts() -%}
+  {%- for i in range(PIPELINE_WORKER_REPLICAS) -%}
+    {%- if not loop.first -%},{%- endif -%}
+    {{ PIPELINE_BUILD_PREFIX }}-{{ PIPELINE_MODEL_TYPE }}-{{ PIPELINE_MODEL_NAME }}-{{ PIPELINE_MODEL_TAG }}-worker-{{ i }}:{{ port }}
+  {%- endfor -%}
+{%- endmacro -%}
+
+{%- macro ps_hosts() -%}
+  {%- for i in range(PIPELINE_PS_REPLICAS) -%}
+    {%- if not loop.first -%},{%- endif -%}
+    {{ PIPELINE_BUILD_PREFIX }}-{{ PIPELINE_MODEL_TYPE }}-{{ PIPELINE_MODEL_NAME }}-{{ PIPELINE_MODEL_TAG }}-ps-{{ i }}:{{ port }}
+  {%- endfor -%}
+{%- endmacro -%}
+
+{%- for job in ["worker", "ps"] -%}
+{%- for i in range(replicas[job]) -%}
+kind: Service
+apiVersion: v1
+metadata:
+  name: {{ PIPELINE_BUILD_PREFIX }}-{{ PIPELINE_MODEL_TYPE }}-{{ PIPELINE_MODEL_NAME }}-{{ PIPELINE_MODEL_TAG }}-{{ job }}-{{ i }}
+spec:
+  selector:
+    name: {{ PIPELINE_BUILD_PREFIX }}-{{ PIPELINE_MODEL_TYPE }}-{{ PIPELINE_MODEL_NAME }}-{{ PIPELINE_MODEL_TAG }}
+    job: {{ job }}
+    task: "{{ i }}"
+  ports:
+  - port: {{ port }}
+---
+kind: ReplicaSet
+apiVersion: extensions/v1beta1
+metadata:
+  name: {{ PIPELINE_BUILD_PREFIX }}-{{ PIPELINE_MODEL_TYPE }}-{{ PIPELINE_MODEL_NAME }}-{{ PIPELINE_MODEL_TAG }}-{{ job }}-{{ i }}
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: {{ PIPELINE_BUILD_PREFIX }}-{{ PIPELINE_MODEL_TYPE }}-{{ PIPELINE_MODEL_NAME }}-{{ PIPELINE_MODEL_TAG }}
+        job: {{ job }}
+        task: "{{ i }}"
+    spec:
+      containers:
+      - name: {{ PIPELINE_BUILD_PREFIX }}-{{ PIPELINE_MODEL_TYPE }}-{{ PIPELINE_MODEL_NAME }}-{{ PIPELINE_MODEL_TAG }} 
+        image: {{ PIPELINE_BUILD_REGISTRY_URL }}/{{ PIPELINE_BUILD_REGISTRY_REPO }}/{{ PIPELINE_BUILD_PREFIX}}-{{ PIPELINE_MODEL_TYPE }}-{{ PIPELINE_MODEL_NAME }}:{{ PIPELINE_MODEL_TAG }} 
+        resources:
+          limits:
+            cpu: {{ PIPELINE_WORKER_CORE_LIMIT }}
+            memory: {{ PIPELINE_WORKER_MEMORY_LIMIT }}
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        imagePullPolicy: "Always"
+        env:
+        - name: PIPELINE_MODEL_DATA_PATH
+          value: "./data"
+        - name: PIPELINE_MODEL_TRAIN_PATH
+          value: "./train"
+        - name: PIPELINE_MODEL_JOB_NAME
+          value: "{{ job }}"
+        - name: PIPELINE_MODEL_TASK_INDEX
+          value: "{{ i }}"
+        - name: PIPELINE_MODEL_WORKER_HOSTS
+          value: "{{ worker_hosts() }}"
+        - name: PIPELINE_MODEL_PS_HOSTS
+          value: "{{ ps_hosts() }}"
+        ports:
+        - containerPort: {{ port }}
+---
+{% endfor %}
+{%- endfor -%}

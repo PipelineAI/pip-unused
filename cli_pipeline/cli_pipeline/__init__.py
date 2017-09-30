@@ -1,10 +1,6 @@
 #-*- coding: utf-8 -*-
 
-__version__ = "1.2.25"
-
-# References:
-#   https://github.com/kubernetes-incubator/client-python/blob/master/kubernetes/README.md
-#   https://github.com/kubernetes/kops/blob/master/docs/aws.md
+__version__ = "1.2.28"
 
 import warnings
 import requests

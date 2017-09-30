@@ -1,4 +1,4 @@
-FROM pipelineai/predict-gpu:master
+FROM pipelineai/predict:gpu-master
 
 ARG model_type
 RUN \

@@ -1,4 +1,4 @@
-FROM pipelineai/predict-cpu:master
+FROM pipelineai/predict:cpu-master
 
 ARG model_type
 RUN \

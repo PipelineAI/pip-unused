@@ -1,6 +1,6 @@
 #-*- coding: utf-8 -*-
 
-__version__ = "1.2.16"
+__version__ = "1.2.23"
 
 # References:
 #   https://github.com/kubernetes-incubator/client-python/blob/master/kubernetes/README.md
@@ -74,8 +74,8 @@ class PipelineCli(object):
                          'hystrix': (['dashboard/hystrix-svc.yaml'], []),
                         }
 
-    _Dockerfile_template_registry = {'predict-cpu': (['predict-cpu-Dockerfile.template'], []),
-                                     'predict-gpu': (['predict-gpu-Dockerfile.template'], [])}
+    _Dockerfile_template_registry = {'predict-cpu': (['predict-Dockerfile-cpu.template'], []),
+                                     'predict-gpu': (['predict-Dockerfile-gpu.template'], [])}
     _kube_deploy_template_registry = {'predict': (['predict-deploy.yaml.template'], [])}
     _kube_svc_template_registry = {'predict': (['predict-svc.yaml.template'], [])}
     _kube_autoscale_template_registry = {'predict': (['predict-autoscale.yaml.template'], [])}
@@ -257,24 +257,27 @@ class PipelineCli(object):
                     model_type,
                     model_name,
                     model_tag,
-                    model_path,
+                    model_path='.',
                     build_type='docker',
                     build_path='.',
-                    build_registry_repo='fluxcapacitor',
+                    build_registry_repo='pipelineai',
                     build_prefix='predict',
                     templates_path=_default_templates_path):
 
-        templates_path = os.path.expandvars(templates_path)
-        templates_path = os.path.expanduser(templates_path)
-        templates_path = os.path.abspath(templates_path)
 
         build_path = os.path.expandvars(build_path)
         build_path = os.path.expanduser(build_path)
         build_path = os.path.abspath(build_path)
 
+        templates_path = os.path.expandvars(templates_path)
+        templates_path = os.path.expanduser(templates_path)
+        templates_path = os.path.abspath(templates_path)
+        templates_path = os.path.relpath(templates_path, build_path)
+
         model_path = os.path.expandvars(model_path)
         model_path = os.path.expanduser(model_path)
         model_path = os.path.abspath(model_path)
+        model_path = os.path.relpath(model_path, build_path)
 
         if build_type == 'docker':
             generated_Dockerfile = self._model_build_init(model_type=model_type, 
@@ -309,7 +312,7 @@ class PipelineCli(object):
                     min_replicas='1',
                     max_replicas='2',
                     build_registry_url='docker.io',
-                    build_registry_repo='fluxcapacitor',
+                    build_registry_repo='pipelineai',
                     build_prefix='predict'):
 
         templates_path = os.path.expandvars(templates_path)
@@ -373,7 +376,7 @@ class PipelineCli(object):
                    model_name,
                    model_tag,
                    build_registry_url='docker.io',
-                   build_registry_repo='fluxcapacitor',
+                   build_registry_repo='pipelineai',
                    build_prefix='predict'):
 
         cmd = 'docker push %s/%s/%s-%s-%s:%s' % (build_registry_url, build_registry_repo, build_prefix, model_type, model_name, model_tag)
@@ -385,7 +388,7 @@ class PipelineCli(object):
                    model_name,
                    model_tag,
                    build_registry_url='docker.io',
-                   build_registry_repo='fluxcapacitor',
+                   build_registry_repo='pipelineai',
                    build_prefix='predict'):
 
         cmd = 'docker pull %s/%s/%s-%s-%s:%s' % (build_registry_url, build_registry_repo, build_prefix, model_type, model_name, model_tag)
@@ -397,7 +400,7 @@ class PipelineCli(object):
                     model_name,
                     model_tag,
                     build_registry_url='docker.io',
-                    build_registry_repo='fluxcapacitor',
+                    build_registry_repo='pipelineai',
                     build_prefix='predict',
                     memory_limit='2G'):
 
@@ -546,7 +549,7 @@ class PipelineCli(object):
                   model_type,
                   model_name,
                   model_tag,
-                  model_path,
+                  model_path='.',
                   tar_path='.',
                   filemode='w',
                   compression='gz'):
@@ -591,7 +594,7 @@ class PipelineCli(object):
                      max_replicas='2',
                      kube_namespace='default',
                      build_registry_url='docker.io',
-                     build_registry_repo='fluxcapacitor',
+                     build_registry_repo='pipelineai',
                      build_prefix='predict',
                      timeout=1200):
 
@@ -635,7 +638,7 @@ class PipelineCli(object):
                          model_type,
                          model_name,
                          model_tag,
-                         model_path,
+                         model_path='.',
                          timeout=1200):
 
         print('model_type: %s' % model_type)
@@ -1135,7 +1138,7 @@ class PipelineCli(object):
     """
     def service_start(self,
                       service_name,
-                      git_home='https://github.com/fluxcapacitor/pipeline',
+                      git_home='https://github.com/PipelineAI/pipeline',
                       git_version='master',
                       kube_namespace='default'):
 

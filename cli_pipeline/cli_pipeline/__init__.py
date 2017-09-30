@@ -1,6 +1,6 @@
 #-*- coding: utf-8 -*-
 
-__version__ = "1.2.14"
+__version__ = "1.2.16"
 
 # References:
 #   https://github.com/kubernetes-incubator/client-python/blob/master/kubernetes/README.md
@@ -74,7 +74,8 @@ class PipelineCli(object):
                          'hystrix': (['dashboard/hystrix-svc.yaml'], []),
                         }
 
-    _Dockerfile_template_registry = {'predict': (['predict-Dockerfile.template'], [])}
+    _Dockerfile_template_registry = {'predict-cpu': (['predict-cpu-Dockerfile.template'], []),
+                                     'predict-gpu': (['predict-gpu-Dockerfile.template'], [])}
     _kube_deploy_template_registry = {'predict': (['predict-deploy.yaml.template'], [])}
     _kube_svc_template_registry = {'predict': (['predict-svc.yaml.template'], [])}
     _kube_autoscale_template_registry = {'predict': (['predict-autoscale.yaml.template'], [])}
@@ -231,14 +232,6 @@ class PipelineCli(object):
                           templates_path,
                           build_path):
 
-        templates_path = os.path.expandvars(templates_path)
-        templates_path = os.path.expanduser(templates_path)
-        templates_path = os.path.abspath(templates_path)
-
-        build_path = os.path.expandvars(build_path)
-        build_path = os.path.expanduser(build_path)
-        build_path = os.path.abspath(build_path)
-
         print("")
         print("Using templates in '%s'." % templates_path)
         print("(Specify --templates-path if the templates live elsewhere.)")
@@ -248,10 +241,11 @@ class PipelineCli(object):
                    'PIPELINE_MODEL_NAME': model_name,
                    'PIPELINE_MODEL_TAG': model_tag}
 
-        model_predict_Dockerfile_templates_path = os.path.join(templates_path, PipelineCli._Dockerfile_template_registry['predict'][0][0])
-        path, filename = os.path.split(model_predict_Dockerfile_templates_path)
+        model_predict_cpu_Dockerfile_templates_path = os.path.join(templates_path, PipelineCli._Dockerfile_template_registry['predict-cpu'][0][0])
+        path, filename = os.path.split(model_predict_cpu_Dockerfile_templates_path)
         rendered = jinja2.Environment(loader=jinja2.FileSystemLoader(path or './')).get_template(filename).render(context)
-        rendered_filename = '%s/generated-%s-%s-%s-Dockerfile' % (build_path, model_type, model_name, model_tag)
+        # TODO:  Create -gpu version as well
+        rendered_filename = '%s/generated-%s-%s-%s-cpu-Dockerfile' % (build_path, model_type, model_name, model_tag)
         with open(rendered_filename, 'wt') as fh:
             fh.write(rendered)
             print("'%s' -> '%s'." % (filename, rendered_filename))
@@ -269,6 +263,18 @@ class PipelineCli(object):
                     build_registry_repo='fluxcapacitor',
                     build_prefix='predict',
                     templates_path=_default_templates_path):
+
+        templates_path = os.path.expandvars(templates_path)
+        templates_path = os.path.expanduser(templates_path)
+        templates_path = os.path.abspath(templates_path)
+
+        build_path = os.path.expandvars(build_path)
+        build_path = os.path.expanduser(build_path)
+        build_path = os.path.abspath(build_path)
+
+        model_path = os.path.expandvars(model_path)
+        model_path = os.path.expanduser(model_path)
+        model_path = os.path.abspath(model_path)
 
         if build_type == 'docker':
             generated_Dockerfile = self._model_build_init(model_type=model_type, 

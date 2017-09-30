@@ -1,4 +1,4 @@
-FROM pipelineai/predict-base:master
+FROM pipelineai/predict-cpu:master
 
 ARG model_type
 RUN \
@@ -34,4 +34,3 @@ RUN \
 
 RUN \
   /root/scripts/train-model-if-requested.sh
-

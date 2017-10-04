@@ -1,6 +1,6 @@
 #-*- coding: utf-8 -*-
 
-__version__ = "1.2.28"
+__version__ = "1.2.29"
 
 import warnings
 import requests
@@ -258,7 +258,7 @@ class PipelineCli(object):
                     model_type,
                     model_name,
                     model_tag,
-                    model_path='.',
+                    model_path,
                     build_type='docker',
                     build_path='.',
                     build_registry_url='docker.io',
@@ -337,7 +337,7 @@ class PipelineCli(object):
                     model_type,
                     model_name,
                     model_tag,
-                    model_path='.',
+                    model_path,
                     build_type='docker',
                     build_path='.',
                     build_registry_repo='pipelineai',
@@ -622,7 +622,7 @@ class PipelineCli(object):
                   model_type,
                   model_name,
                   model_tag,
-                  model_path='.',
+                  model_path,
                   tar_path='.',
                   filemode='w',
                   compression='gz'):
@@ -711,7 +711,7 @@ class PipelineCli(object):
                          model_type,
                          model_name,
                          model_tag,
-                         model_path='.',
+                         model_path,
                          timeout=1200):
 
         print('model_type: %s' % model_type)

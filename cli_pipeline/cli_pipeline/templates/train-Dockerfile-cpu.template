@@ -33,50 +33,22 @@ RUN \
 ENV \
   PIPELINE_MODEL_TRAIN_CONDA_ENV_NAME=pipeline-train-$model_type-$model_name-$model_tag
 
-# TODO:  Sub-Dockerfile There...
-#RUN \
-#  /root/scripts/setup-model-environment.sh
-
 RUN \
-  if [ -e "$PIPELINE_MODEL_PATH/pipeline_conda_environment.yml" ]; then \
+  if [ -f "$PIPELINE_MODEL_PATH/pipeline_conda_environment.yml" ]; then \
     echo "" \
-    echo "Creating Conda Environment '$PIPELINE_MODEL_TRAIN_CONDA_ENV_NAME' with '$PIPELINE_MODEL_PATH/pipeline_conda_environment.yml'..." \
-    echo "" \
-    conda env update --name $PIPELINE_MODEL_TRAIN_CONDA_ENV_NAME --file $PIPELINE_MODEL_PATH/pipeline_conda_environment.yml \
-    echo "" \
-    echo "...Conda Environment Updated!" \
-    echo "" \
-    echo "source activate $PIPELINE_MODEL_TRAIN_CONDA_ENV_NAME" >> ~/.bashrc; \
+    && echo "Creating Conda Environment '$PIPELINE_MODEL_TRAIN_CONDA_ENV_NAME' with '$PIPELINE_MODEL_PATH/pipeline_conda_environment.yml'..." \
+    && echo "" \
+    && conda env update --name $PIPELINE_MODEL_TRAIN_CONDA_ENV_NAME --file $PIPELINE_MODEL_PATH/pipeline_conda_environment.yml \ 
+    && echo "" \
+    && echo "...Conda Environment Updated!" \
+    && echo ""; \
   fi
 
-#RUN \
-#  if [ -e "$PIPELINE_MODEL_PATH/pipeline_install.sh" ]; then
-#    CONDA_ENV_ROOT_PATH=$(conda info --root)
-#    echo "Installing '$PIPELINE_MODEL_PATH/pipeline_install.sh' into Conda Environment '$PIPELINE_MODEL_PREDICT_CONDA_ENV_NAME'..."
-#    conda info --root
-#    conda env list
-#    echo ""
-#    source activate $PIPELINE_MODEL_PREDICT_CONDA_ENV_NAME
-#    echo "Running '$PIPELINE_MODEL_PATH/pipeline_install.sh'..."
-#    chmod a+x $PIPELINE_MODEL_PATH/pipeline_install.sh
-#    $PIPELINE_MODEL_PATH/pipeline_install.sh
-#    export
-#    echo ""
-#    echo "...Successfully Installed!"
-#    echo ""
-#  fi
+RUN \
+  echo "source activate $PIPELINE_MODEL_TRAIN_CONDA_ENV_NAME" >> ~/.bashrc
 
-
-
-
-
-
-
-
-
-
-#RUN \
-#  /root/scripts/train-model-if-requested.sh
+RUN \
+  source activate $PIPELINE_MODEL_TRAIN_CONDA_ENV_NAME && conda env list && conda list
 
 RUN \
     if [ -f "$PIPELINE_MODEL_PATH/Guild" ]; then \
@@ -95,13 +67,18 @@ RUN \
    fi
 
 RUN \
-   if [ -f "$PIPELINE_MODEL_PATH/pipeline_train.py" ]; then \
-         echo "" \
-         && echo "Starting pipeline_train.py..." \
-         && echo "" \
-         && cd $PIPELINE_MODEL_PATH \
-         && python pipeline_train.py \
-         && echo "" \
-         && echo "...Training Complete!" \
-         && echo ""; \
+   if [ -f "$PIPELINE_MODEL_PATH/pipeline_install.sh" ]; then \
+     CONDA_ENV_ROOT_PATH=$(conda info --root) \
+     && echo "Installing '$PIPELINE_MODEL_PATH/pipeline_install.sh' into Conda Environment '$PIPELINE_MODEL_TRAIN_CONDA_ENV_NAME'..." \
+     && conda info --root \
+     && conda env list \
+     && echo "" \
+     && source activate $PIPELINE_MODEL_TRAIN_CONDA_ENV_NAME \
+     && echo "Running '$PIPELINE_MODEL_PATH/pipeline_install.sh'..." \
+     && sudo chmod a+x $PIPELINE_MODEL_PATH/pipeline_install.sh \
+     && $PIPELINE_MODEL_PATH/pipeline_install.sh \
+     && export \
+     && echo "" \
+     && echo "...Successfully Installed!" \
+     && echo ""; \
    fi

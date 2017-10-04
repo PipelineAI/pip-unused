@@ -1,1 +1,1 @@
-Click [HERE](http://pipeline.ai/api/) for the [PipelineAI API](http://pipeline.ai/api/).
+Click [HERE](https://github.com/PipelineAI/predict) for the PipelineAI API.

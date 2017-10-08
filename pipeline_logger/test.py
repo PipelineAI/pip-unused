@@ -10,7 +10,7 @@ _logger_stream_handler = logging.StreamHandler()
 _logger_stream_handler.setLevel(logging.INFO)
 _logger.addHandler(_logger_stream_handler)
 
-_logger_kafka_handler = KafkaHandler(hosts_list='localhost:9092', topic='prediction-inputs')
+_logger_kafka_handler = KafkaHandler(host_list='localhost:9092', topic='prediction-inputs')
 _logger.addHandler(_logger_kafka_handler)
 
 _logger_tensorboard_handler = TensorboardHandler(logdir_path='/tmp/pipeline_logger.tensorboard_handler')

@@ -5,10 +5,10 @@ import logging
 
 class KafkaHandler(logging.Handler):
 
-    def __init__(self, hosts_list, topic, **kwargs):
+    def __init__(self, host_list, topic, **kwargs):
         logging.Handler.__init__(self)
 
-        self.kafka_client = SimpleClient(hosts_list)
+        self.kafka_client = SimpleClient(host_list)
         self.key = kwargs.get("key", None)
         self.kafka_topic_name = topic
 

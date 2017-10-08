@@ -39,6 +39,8 @@ class TensorFlowServingModel():
         tf_request.inputs[self._inputs_name].CopyFrom(inputs_tensor_proto)
 
         tf_request.model_spec.name = self._model_name
+        # We assume only a single version exists per model.  
+        # Regardless of the version, TF Serving will pick up this single version.
         #tf_request.model_spec.version.value = int(model_version)
 
         # Transform TensorFlow PredictResponse into output

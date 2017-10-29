@@ -1,1 +1,1 @@
-PipelineAI API:  http://pipeline.io/api/
+PipelineAI Docs:  http://pipeline.ai/docs

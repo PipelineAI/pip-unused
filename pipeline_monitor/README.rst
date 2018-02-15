@@ -1,1 +1,2 @@
-PipelineAI API:  http://pipeline.io/api/
+PipelineAI Home:  http://pipeline.ai
+PipelineAI GitHub:  http://github.com/PipelineAI

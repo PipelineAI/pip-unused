@@ -1,7 +1,7 @@
 from prometheus_client import CollectorRegistry, generate_latest, start_http_server, Summary, Counter, Histogram, Gauge
 from timeit import default_timer
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 prometheus_monitor_registry = CollectorRegistry()
 

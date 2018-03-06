@@ -5,7 +5,7 @@ import tensorflow as tf
 # These are generated from the TF serving source.
 from . import model_pb2, predict_pb2, prediction_service_pb2
 
-__version__ = "1.0.5"
+__version__ = "1.0.6"
 
 class TensorFlowServingModel():
     
@@ -24,7 +24,7 @@ class TensorFlowServingModel():
 
 
     def predict(self,
-                input_str_nparray_dict):
+                input_string_to_tensor_dict):
 
         channel = implementations.insecure_channel(self._host,
                                                    self._port)
@@ -39,9 +39,7 @@ class TensorFlowServingModel():
         # We assume only a single version per model is running in this model server.
         # tf_request.model_spec.version.value = ...
 
-        for input_str_key, _ in input_str_nparray_dict.items():
-            input_tensor = tf.make_tensor_proto(input_str_nparray_dict[input_str_key],
-                                                dtype=tf.float32)
+        for input_str_key, input_tensor in input_string_to_tensor_dict.items():
             tf_request.inputs[input_str_key].CopyFrom(input_tensor)
 
         # Call TensorFlow Serving Predict

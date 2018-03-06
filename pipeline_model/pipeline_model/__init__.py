@@ -5,7 +5,7 @@ import tensorflow as tf
 # These are generated from the TF serving source.
 from . import model_pb2, predict_pb2, prediction_service_pb2
 
-__version__ = "1.0.4"
+__version__ = "1.0.5"
 
 class TensorFlowServingModel():
     
@@ -13,12 +13,14 @@ class TensorFlowServingModel():
                  host: str,
                  port: int,
                  model_name: str,
-                 timeout: int):
+                 model_signature_name=None,
+                 timeout_seconds=5.0): # 5 second timeout
 
         self._host = host
         self._port = port
         self._model_name = model_name
-        self._timeout = timeout
+        self._model_signature_name = model_signature_name
+        self._timeout_seconds = timeout_seconds
 
 
     def predict(self,
@@ -32,6 +34,8 @@ class TensorFlowServingModel():
         # Transform input str::nparray dict into TensorFlow PredictRequest/tensors
         tf_request = predict_pb2.PredictRequest()
         tf_request.model_spec.name = self._model_name
+        if self._model_signature_name:
+            tf_request.model_spec.signature_name = self._model_signature_name
         # We assume only a single version per model is running in this model server.
         # tf_request.model_spec.version.value = ...
 
@@ -41,7 +45,7 @@ class TensorFlowServingModel():
             tf_request.inputs[input_str_key].CopyFrom(input_tensor)
 
         # Call TensorFlow Serving Predict
-        response = stub.Predict(tf_request, self._timeout)
+        response = stub.Predict(tf_request, self._timeout_seconds)
 
         # Transform PredictResponse/tensors to output str::nparray dict
         output_str_nparray_dict = {}

@@ -1,6 +1,5 @@
-import numpy as np
 from grpc.beta import implementations
-import tensorflow as tf
+#import tensorflow as tf
 # These are generated from the TF serving source 
 #   or copied from various places such as the following:
 #     https://github.com/Vetal1977/tf_serving_example
@@ -8,7 +7,7 @@ import tensorflow as tf
 from tensorflow_serving.apis import predict_pb2, prediction_service_pb2
 from tensorflow.core.framework import tensor_pb2, tensor_shape_pb2, types_pb2
 
-__version__ = "1.0.7"
+__version__ = "1.0.8"
 
 # TODO:  Add convenience methods for the following techniques:
 #   https://towardsdatascience.com/tensorflow-serving-client-make-it-slimmer-and-faster-b3e5f71208fb
@@ -56,9 +55,10 @@ class TensorFlowServingModel():
         # Call TensorFlow Serving Predict
         response = stub.Predict(tf_request, self._timeout_seconds)
 
-        # Transform PredictResponse/tensors to output str::nparray dict
-        output_str_nparray_dict = {}
+        # Return tensor dict
+        output_string_to_tensor_dict = {}
         for output_str_key, _ in response.outputs.items():
-            output_str_nparray_dict[output_str_key] = tf.make_ndarray(response.outputs[output_str_key])
+            output_string_to_tensor_dict[output_str_key] = repsonse.outputs[output_str_key]
+               #tf.make_ndarray(response.outputs[output_str_key])
 
-        return output_str_nparray_dict
+        return output_string_to_tensor_dict

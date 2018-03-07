@@ -29,7 +29,7 @@ with open('requirements.txt', encoding='utf-8') as f:
 
 setup(
     name = "pipeline-model",
-    packages = ["pipeline_model"],
+    packages = ["pipeline_model", "tensorflow", "tensorflow_serving"],
     version = version,
     description = "PipelineAI Model",
     long_description = "%s\n\nRequirements:\n%s" % (long_description, requirements),

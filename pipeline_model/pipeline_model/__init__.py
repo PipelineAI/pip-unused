@@ -1,11 +1,22 @@
 import numpy as np
 from grpc.beta import implementations
-import asyncio
 import tensorflow as tf
-# These are generated from the TF serving source.
-from . import model_pb2, predict_pb2, prediction_service_pb2
+# These are generated from the TF serving source 
+#   or copied from various places such as the following:
+#     https://github.com/Vetal1977/tf_serving_example
+#     https://github.com/tobegit3hub/tensorflow_template_application
+from tensorflow_serving.apis import predict_pb2, prediction_service_pb2
+from tensorflow.core.framework import tensor_pb2, tensor_shape_pb2, types_pb2
 
-__version__ = "1.0.6"
+__version__ = "1.0.7"
+
+# TODO:  Add convenience methods for the following techniques:
+#   https://towardsdatascience.com/tensorflow-serving-client-make-it-slimmer-and-faster-b3e5f71208fb
+#   https://medium.com/@stianlindpetlund/tensorflow-serving-101-pt-2-682eaf7469e7
+#   https://github.com/davyzhang/dict-to-protobuf
+#  
+# TODO:  Add mock tensorflow serving server described here: 
+#    https://medium.com/@stianlindpetlund/tensorflow-serving-101-pt-2-682eaf7469e7
 
 class TensorFlowServingModel():
     

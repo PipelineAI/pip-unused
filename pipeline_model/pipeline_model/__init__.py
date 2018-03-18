@@ -7,7 +7,7 @@ from grpc.beta import implementations
 from tensorflow_serving.apis import predict_pb2, prediction_service_pb2
 from tensorflow.core.framework import tensor_pb2, tensor_shape_pb2, types_pb2
 
-__version__ = "1.0.8"
+__version__ = "1.0.9"
 
 # TODO:  Add convenience methods for the following techniques:
 #   https://towardsdatascience.com/tensorflow-serving-client-make-it-slimmer-and-faster-b3e5f71208fb

@@ -3,7 +3,8 @@
 """setup.py: setuptools control."""
 
 import re
-from setuptools import setup
+from setuptools import setup, find_packages
+from distutils import util
 
 #import sys
 #if not sys.version_info[0] == 3:
@@ -29,7 +30,12 @@ with open('requirements.txt', encoding='utf-8') as f:
 
 setup(
     name = "pipeline-model",
-    packages = ["pipeline_model", "tensorflow", "tensorflow_serving"],
+    packages = find_packages(),
+#    packages = ["pipeline_model, tensorflow, tensorflow_serving"],
+#    package_dir = {'pipeline_model': 'pipeline_model',
+#                   'tensorflow': util.convert_path('tensorflow'),
+#                   'tensorflow_serving': util.convert_path('tensorflow_serving'),
+#                  },
     version = version,
     description = "PipelineAI Model",
     long_description = "%s\n\nRequirements:\n%s" % (long_description, requirements),
@@ -37,6 +43,5 @@ setup(
     author_email = "github@pipeline.ai",
     url = "https://github.com/pipelineai/pip/",
     install_requires=requirements,
-    dependency_links=[
-    ]
+    dependency_links=[],
 )

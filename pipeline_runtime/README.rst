@@ -1,2 +1,3 @@
-PipelineAI Home:  http://pipeline.ai
-PipelineAI GitHub:  https://github.com/PipelineAI
+PipelineAI Home:  https://pipeline.ai
+PipelineAI GitHub:  https://github.pipeline.ai
+PipelineAI Quick Start:  https://quickstart.pipeline.ai
